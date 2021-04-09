@@ -1,17 +1,15 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.eShopOnContainers.WebMVC.Services;
 using Microsoft.eShopOnContainers.WebMVC.ViewModels;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authentication;
-using Polly.CircuitBreaker;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Microsoft.eShopOnContainers.WebMVC.Controllers
 {
-    [Authorize]
+    [Authorize(AuthenticationSchemes = OpenIdConnectDefaults.AuthenticationScheme)]
     public class CartController : Controller
     {
         private readonly IBasketService _basketSvc;
@@ -34,16 +32,15 @@ namespace Microsoft.eShopOnContainers.WebMVC.Controllers
 
                 return View(vm);
             }
-            catch (BrokenCircuitException)
+            catch (Exception ex)
             {
-                // Catch error when Basket.api is in circuit-opened mode                 
-                HandleBrokenCircuitException();
+                HandleException(ex);
             }
 
             return View();
         }
 
-        
+
         [HttpPost]
         public async Task<IActionResult> Index(Dictionary<string, int> quantities, string action)
         {
@@ -51,18 +48,14 @@ namespace Microsoft.eShopOnContainers.WebMVC.Controllers
             {
                 var user = _appUserParser.Parse(HttpContext.User);
                 var basket = await _basketSvc.SetQuantities(user, quantities);
-                var vm = await _basketSvc.UpdateBasket(basket);
-
                 if (action == "[ Checkout ]")
                 {
-                    var order = _basketSvc.MapBasketToOrder(basket);
                     return RedirectToAction("Create", "Order");
                 }
             }
-            catch (BrokenCircuitException)
+            catch (Exception ex)
             {
-                // Catch error when Basket.api is in circuit-opened mode                 
-                HandleBrokenCircuitException();
+                HandleException(ex);
             }
 
             return View();
@@ -72,34 +65,25 @@ namespace Microsoft.eShopOnContainers.WebMVC.Controllers
         {
             try
             {
-                if (productDetails.Id != null)
+                if (productDetails?.Id != null)
                 {
                     var user = _appUserParser.Parse(HttpContext.User);
-                    var product = new BasketItem()
-                    {
-                        Id = Guid.NewGuid().ToString(),
-                        Quantity = 1,
-                        ProductName = productDetails.Name,
-                        PictureUrl = productDetails.PictureUri,
-                        UnitPrice = productDetails.Price,
-                        ProductId = productDetails.Id
-                    };
-                    await _basketSvc.AddItemToBasket(user, product);
+                    await _basketSvc.AddItemToBasket(user, productDetails.Id);
                 }
-                return RedirectToAction("Index", "Catalog");            
+                return RedirectToAction("Index", "Catalog");
             }
-            catch (BrokenCircuitException)
+            catch (Exception ex)
             {
                 // Catch error when Basket.api is in circuit-opened mode                 
-                HandleBrokenCircuitException();
+                HandleException(ex);
             }
 
-            return RedirectToAction("Index", "Catalog");
+            return RedirectToAction("Index", "Catalog", new { errorMsg = ViewBag.BasketInoperativeMsg });
         }
 
-        private void HandleBrokenCircuitException()
+        private void HandleException(Exception ex)
         {
-            TempData["BasketInoperativeMsg"] = "Basket Service is inoperative, please try later on. (Business Msg Due to Circuit-Breaker)";
+            ViewBag.BasketInoperativeMsg = $"Basket Service is inoperative {ex.GetType().Name} - {ex.Message}";
         }
     }
 }

@@ -1,5 +1,6 @@
 import { Component, OnInit }    from '@angular/core';
-import { Subscription }         from 'rxjs/Subscription';
+import { Observable, Subscription } from 'rxjs';
+import { catchError }           from 'rxjs/operators';
 
 import { CatalogService }       from './catalog.service';
 import { ConfigurationService } from '../shared/services/configuration.service';
@@ -10,7 +11,6 @@ import { ICatalogBrand }        from '../shared/models/catalogBrand.model';
 import { IPager }               from '../shared/models/pager.model';
 import { BasketWrapperService}  from '../shared/services/basket.wrapper.service';
 import { SecurityService }      from '../shared/services/security.service';
-import { Observable } from 'rxjs/Observable';
 
 @Component({
     selector: 'esh-catalog .esh-catalog',
@@ -56,6 +56,10 @@ export class CatalogComponent implements OnInit {
 
     onFilterApplied(event: any) {
         event.preventDefault();
+        
+        this.brandSelected = this.brandSelected && this.brandSelected.toString() != "null" ? this.brandSelected : null;
+        this.typeSelected = this.typeSelected && this.typeSelected.toString() != "null" ? this.typeSelected : null;
+        this.paginationInfo.actualPage = 0;
         this.getCatalog(this.paginationInfo.itemsPage, this.paginationInfo.actualPage, this.brandSelected, this.typeSelected);
     }
 
@@ -82,8 +86,9 @@ export class CatalogComponent implements OnInit {
 
     getCatalog(pageSize: number, pageIndex: number, brand?: number, type?: number) {
         this.errorReceived = false;
+
         this.service.getCatalog(pageIndex, pageSize, brand, type)
-            .catch((err) => this.handleError(err))
+            .pipe(catchError((err) => this.handleError(err)))
             .subscribe(catalog => {
                 this.catalog = catalog;
                 this.paginationInfo = {
@@ -91,7 +96,7 @@ export class CatalogComponent implements OnInit {
                     itemsPage : catalog.pageSize,
                     totalItems : catalog.count,
                     totalPages: Math.ceil(catalog.count / catalog.pageSize),
-                    items: catalog.pageSize
+                    items: catalog.data.length
                 };
         });
     }

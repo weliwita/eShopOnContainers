@@ -1,9 +1,9 @@
-﻿using System;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.eShopOnContainers.WebMVC.ViewModels.Pagination;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.eShopOnContainers.WebMVC.Services;
 using Microsoft.eShopOnContainers.WebMVC.ViewModels.CatalogViewModels;
+using Microsoft.eShopOnContainers.WebMVC.ViewModels.Pagination;
+using System;
+using System.Threading.Tasks;
 
 namespace Microsoft.eShopOnContainers.WebMVC.Controllers
 {
@@ -11,10 +11,10 @@ namespace Microsoft.eShopOnContainers.WebMVC.Controllers
     {
         private ICatalogService _catalogSvc;
 
-        public CatalogController(ICatalogService catalogSvc) => 
+        public CatalogController(ICatalogService catalogSvc) =>
             _catalogSvc = catalogSvc;
 
-        public async Task<IActionResult> Index(int? BrandFilterApplied, int? TypesFilterApplied, int? page)
+        public async Task<IActionResult> Index(int? BrandFilterApplied, int? TypesFilterApplied, int? page, [FromQuery] string errorMsg)
         {
             var itemsPage = 10;
             var catalog = await _catalogSvc.GetCatalogItems(page ?? 0, itemsPage, BrandFilterApplied, TypesFilterApplied);
@@ -29,13 +29,15 @@ namespace Microsoft.eShopOnContainers.WebMVC.Controllers
                 {
                     ActualPage = page ?? 0,
                     ItemsPerPage = catalog.Data.Count,
-                    TotalItems = catalog.Count, 
+                    TotalItems = catalog.Count,
                     TotalPages = (int)Math.Ceiling(((decimal)catalog.Count / itemsPage))
                 }
             };
 
             vm.PaginationInfo.Next = (vm.PaginationInfo.ActualPage == vm.PaginationInfo.TotalPages - 1) ? "is-disabled" : "";
             vm.PaginationInfo.Previous = (vm.PaginationInfo.ActualPage == 0) ? "is-disabled" : "";
+
+            ViewBag.BasketInoperativeMsg = errorMsg;
 
             return View(vm);
         }

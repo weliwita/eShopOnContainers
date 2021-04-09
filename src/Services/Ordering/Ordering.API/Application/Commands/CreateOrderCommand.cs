@@ -1,9 +1,9 @@
-﻿using System;
-using MediatR;
-using System.Collections.Generic;
-using System.Runtime.Serialization;
-using System.Collections;
+﻿using MediatR;
 using Ordering.API.Application.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.Serialization;
 
 namespace Microsoft.eShopOnContainers.Services.Ordering.API.Application.Commands
 {
@@ -14,7 +14,7 @@ namespace Microsoft.eShopOnContainers.Services.Ordering.API.Application.Commands
     // http://cqrs.nu/Faq
     // https://docs.spine3.org/motivation/immutability.html 
     // http://blog.gauffin.org/2012/06/griffin-container-introducing-command-support/
-    // https://msdn.microsoft.com/en-us/library/bb383979.aspx
+    // https://docs.microsoft.com/dotnet/csharp/programming-guide/classes-and-structs/how-to-implement-a-lightweight-class-with-auto-implemented-properties
 
     [DataContract]
     public class CreateOrderCommand
@@ -25,6 +25,9 @@ namespace Microsoft.eShopOnContainers.Services.Ordering.API.Application.Commands
 
         [DataMember]
         public string UserId { get; private set; }
+
+        [DataMember]
+        public string UserName { get; private set; }
 
         [DataMember]
         public string City { get; private set; }
@@ -64,12 +67,13 @@ namespace Microsoft.eShopOnContainers.Services.Ordering.API.Application.Commands
             _orderItems = new List<OrderItemDTO>();
         }
 
-        public CreateOrderCommand(List<BasketItem> basketItems, string userId, string city, string street, string state, string country, string zipcode,
+        public CreateOrderCommand(List<BasketItem> basketItems, string userId, string userName, string city, string street, string state, string country, string zipcode,
             string cardNumber, string cardHolderName, DateTime cardExpiration,
             string cardSecurityNumber, int cardTypeId) : this()
         {
-            _orderItems = MapToOrderItems(basketItems);
+            _orderItems = basketItems.ToOrderItemsDTO().ToList();
             UserId = userId;
+            UserName = userName;
             City = city;
             Street = street;
             State = state;
@@ -83,34 +87,20 @@ namespace Microsoft.eShopOnContainers.Services.Ordering.API.Application.Commands
             CardExpiration = cardExpiration;
         }
 
-        private List<OrderItemDTO> MapToOrderItems(List<BasketItem> basketItems)
+
+        public record OrderItemDTO
         {
-            var result = new List<OrderItemDTO>();
-            basketItems.ForEach((item) => {
-                result.Add(new OrderItemDTO() {
-                    ProductId = int.TryParse(item.ProductId, out int id) ? id : -1,
-                    ProductName = item.ProductName,
-                    PictureUrl = item.PictureUrl,
-                    UnitPrice = item.UnitPrice,
-                    Units = item.Quantity                 
-                });
-            });
-            return result;
-        }
+            public int ProductId { get; init; }
 
-        public class OrderItemDTO
-        {
-            public int ProductId { get; set; }
+            public string ProductName { get; init; }
 
-            public string ProductName { get; set; }
+            public decimal UnitPrice { get; init; }
 
-            public decimal UnitPrice { get; set; }
+            public decimal Discount { get; init; }
 
-            public decimal Discount { get; set; }
+            public int Units { get; init; }
 
-            public int Units { get; set; }
-
-            public string PictureUrl { get; set; }
+            public string PictureUrl { get; init; }
         }
     }
 }

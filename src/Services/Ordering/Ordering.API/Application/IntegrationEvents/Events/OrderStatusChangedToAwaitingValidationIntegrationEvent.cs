@@ -1,22 +1,26 @@
 ﻿namespace Ordering.API.Application.IntegrationEvents.Events
 {
-    using System.Collections.Generic;
     using Microsoft.eShopOnContainers.BuildingBlocks.EventBus.Events;
+    using System.Collections.Generic;
 
-    public class OrderStatusChangedToAwaitingValidationIntegrationEvent : IntegrationEvent
+    public record OrderStatusChangedToAwaitingValidationIntegrationEvent : IntegrationEvent
     {
         public int OrderId { get; }
+        public string OrderStatus { get; }
+        public string BuyerName { get; }
         public IEnumerable<OrderStockItem> OrderStockItems { get; }
 
-        public OrderStatusChangedToAwaitingValidationIntegrationEvent(int orderId,
+        public OrderStatusChangedToAwaitingValidationIntegrationEvent(int orderId, string orderStatus, string buyerName,
             IEnumerable<OrderStockItem> orderStockItems)
         {
             OrderId = orderId;
             OrderStockItems = orderStockItems;
+            OrderStatus = orderStatus;
+            BuyerName = buyerName;
         }
     }
 
-    public class OrderStockItem
+    public record OrderStockItem
     {
         public int ProductId { get; }
         public int Units { get; }
